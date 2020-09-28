@@ -266,6 +266,15 @@ InfluxDB:
 influxdb-java:
   id: 90
   languages: Java
+SpringScheduled:
+  id: 96
+  languages: Java
+quartz-scheduler:
+  id: 97
+  languages: Java
+xxl-job:
+  id: 98
+  languages: Java
 
 # .NET/.NET Core components
 # [3000, 4000) for C#/.NET only

@@ -20,7 +20,6 @@ package org.apache.skywalking.oap.server.core;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.nio.file.Paths;
 import org.apache.skywalking.oap.server.configuration.api.ConfigurationModule;
 import org.apache.skywalking.oap.server.configuration.api.DynamicConfigurationService;
 import org.apache.skywalking.oap.server.core.analysis.ApdexThresholdConfig;
@@ -52,6 +51,7 @@ import org.apache.skywalking.oap.server.core.oal.rt.OALEngineLoaderService;
 import org.apache.skywalking.oap.server.core.profile.ProfileTaskMutationService;
 import org.apache.skywalking.oap.server.core.query.AggregationQueryService;
 import org.apache.skywalking.oap.server.core.query.AlarmQueryService;
+import org.apache.skywalking.oap.server.core.query.BrowserLogQueryService;
 import org.apache.skywalking.oap.server.core.query.LogQueryService;
 import org.apache.skywalking.oap.server.core.query.MetadataQueryService;
 import org.apache.skywalking.oap.server.core.query.MetricsMetadataQueryService;
@@ -90,6 +90,7 @@ import org.apache.skywalking.oap.server.library.module.ServiceNotProvidedExcepti
 import org.apache.skywalking.oap.server.library.server.ServerException;
 import org.apache.skywalking.oap.server.library.server.grpc.GRPCServer;
 import org.apache.skywalking.oap.server.library.server.jetty.JettyServer;
+import org.apache.skywalking.oap.server.library.server.jetty.JettyServerConfig;
 import org.apache.skywalking.oap.server.library.util.ResourceUtils;
 import org.apache.skywalking.oap.server.telemetry.TelemetryModule;
 import org.apache.skywalking.oap.server.telemetry.api.TelemetryRelatedContext;
@@ -179,8 +180,8 @@ public class CoreModuleProvider extends ModuleProvider {
 
         if (moduleConfig.isGRPCSslEnabled()) {
             grpcServer = new GRPCServer(moduleConfig.getGRPCHost(), moduleConfig.getGRPCPort(),
-                    Paths.get(moduleConfig.getGRPCSslCertChainPath()).toFile(),
-                    Paths.get(moduleConfig.getGRPCSslKeyPath()).toFile()
+                    moduleConfig.getGRPCSslCertChainPath(),
+                    moduleConfig.getGRPCSslKeyPath()
             );
         } else {
             grpcServer = new GRPCServer(moduleConfig.getGRPCHost(), moduleConfig.getGRPCPort());
@@ -199,9 +200,19 @@ public class CoreModuleProvider extends ModuleProvider {
         }
         grpcServer.initialize();
 
-        jettyServer = new JettyServer(
-                moduleConfig.getRestHost(), moduleConfig.getRestPort(), moduleConfig.getRestContextPath(), moduleConfig
-                .getJettySelectors());
+        JettyServerConfig jettyServerConfig = JettyServerConfig.builder()
+                                                               .host(moduleConfig.getRestHost())
+                                                               .port(moduleConfig.getRestPort())
+                                                               .contextPath(moduleConfig.getRestContextPath())
+                                                               .jettyIdleTimeOut(moduleConfig.getRestIdleTimeOut())
+                                                               .jettyAcceptorPriorityDelta(
+                                                                   moduleConfig.getRestAcceptorPriorityDelta())
+                                                               .jettyMinThreads(moduleConfig.getRestMinThreads())
+                                                               .jettyMaxThreads(moduleConfig.getRestMaxThreads())
+                                                               .jettyAcceptQueueSize(
+                                                                   moduleConfig.getRestAcceptQueueSize())
+                                                               .build();
+        jettyServer = new JettyServer(jettyServerConfig);
         jettyServer.initialize();
 
         this.registerServiceImplementation(ConfigService.class, new ConfigService(moduleConfig));
@@ -231,6 +242,7 @@ public class CoreModuleProvider extends ModuleProvider {
         this.registerServiceImplementation(MetricsMetadataQueryService.class, new MetricsMetadataQueryService());
         this.registerServiceImplementation(MetricsQueryService.class, new MetricsQueryService(getManager()));
         this.registerServiceImplementation(TraceQueryService.class, new TraceQueryService(getManager()));
+        this.registerServiceImplementation(BrowserLogQueryService.class, new BrowserLogQueryService(getManager()));
         this.registerServiceImplementation(LogQueryService.class, new LogQueryService(getManager()));
         this.registerServiceImplementation(MetadataQueryService.class, new MetadataQueryService(getManager()));
         this.registerServiceImplementation(AggregationQueryService.class, new AggregationQueryService(getManager()));
@@ -253,9 +265,7 @@ public class CoreModuleProvider extends ModuleProvider {
 
         if (moduleConfig.isGRPCSslEnabled()) {
             this.remoteClientManager = new RemoteClientManager(getManager(), moduleConfig.getRemoteTimeout(),
-                    Paths.get(moduleConfig.getGRPCSslTrustedCAPath())
-                            .toFile()
-            );
+                    moduleConfig.getGRPCSslTrustedCAPath());
         } else {
             this.remoteClientManager = new RemoteClientManager(getManager(), moduleConfig.getRemoteTimeout());
         }

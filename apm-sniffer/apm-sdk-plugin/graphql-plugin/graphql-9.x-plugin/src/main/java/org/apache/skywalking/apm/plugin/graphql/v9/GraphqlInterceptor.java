@@ -29,8 +29,6 @@ import org.apache.skywalking.apm.agent.core.plugin.interceptor.enhance.MethodInt
 import org.apache.skywalking.apm.network.trace.component.ComponentsDefine;
 
 import java.lang.reflect.Method;
-import java.util.HashMap;
-import java.util.Map;
 
 public class GraphqlInterceptor implements InstanceMethodsAroundInterceptor {
 
@@ -41,7 +39,7 @@ public class GraphqlInterceptor implements InstanceMethodsAroundInterceptor {
             return;
         }
         AbstractSpan span = ContextManager.createLocalSpan(parameters.getField().get(0).getName());
-        Tags.LOGIC_ENDPOINT.set(span, buildLogicEndpointSpan());
+        Tags.LOGIC_ENDPOINT.set(span, Tags.VAL_LOCAL_SPAN_AS_LOGIC_ENDPOINT);
         span.setComponent(ComponentsDefine.GRAPHQL);
     }
 
@@ -66,13 +64,6 @@ public class GraphqlInterceptor implements InstanceMethodsAroundInterceptor {
 
     private void dealException(Throwable throwable) {
         AbstractSpan span = ContextManager.activeSpan();
-        span.errorOccurred();
         span.log(throwable);
-    }
-
-    private String buildLogicEndpointSpan() {
-        Map<String, Object> logicEndpointSpan = new HashMap<>();
-        logicEndpointSpan.put("logic-span", true);
-        return logicEndpointSpan.toString();
     }
 }

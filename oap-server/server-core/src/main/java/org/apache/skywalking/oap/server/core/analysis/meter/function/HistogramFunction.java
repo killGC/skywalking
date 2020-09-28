@@ -47,7 +47,7 @@ public abstract class HistogramFunction extends Metrics implements AcceptableVal
 
     @Setter
     @Getter
-    @Column(columnName = ENTITY_ID)
+    @Column(columnName = ENTITY_ID, length = 512)
     private String entityId;
     @Getter
     @Setter
@@ -68,7 +68,7 @@ public abstract class HistogramFunction extends Metrics implements AcceptableVal
         final long[] values = value.getValues();
         for (int i = 0; i < values.length; i++) {
             final long bucket = value.getBuckets()[i];
-            String bucketName = bucket == Integer.MIN_VALUE ? Bucket.INFINITE_NEGATIVE : String.valueOf(bucket);
+            String bucketName = bucket == Long.MIN_VALUE ? Bucket.INFINITE_NEGATIVE : String.valueOf(bucket);
             final long bucketValue = values[i];
             dataset.valueAccumulation(bucketName, bucketValue);
         }

@@ -130,7 +130,7 @@ public class MetricsPersistentWorker extends PersistenceWorker<Metrics> {
          * Hard coded the max size. This is only the batch size of one metrics, too large number is meaningless.
          */
         int maxBatchGetSize = 2000;
-        final int batchSize = Math.max(maxBatchGetSize, lastCollection.size());
+        final int batchSize = Math.min(maxBatchGetSize, lastCollection.size());
         List<Metrics> metricsList = new ArrayList<>();
         for (Metrics data : lastCollection) {
             transWorker.ifPresent(metricsTransWorker -> metricsTransWorker.in(data));
@@ -176,17 +176,17 @@ public class MetricsPersistentWorker extends PersistenceWorker<Metrics> {
                     cachedMetrics.calculate();
                     prepareRequests.add(metricsDAO.prepareBatchUpdate(model, cachedMetrics));
                     nextWorker(cachedMetrics);
-
-                    /*
-                     * The `data` should be not changed in any case. Exporter is an async process.
-                     */
-                    nextExportWorker.ifPresent(exportEvenWorker -> exportEvenWorker.in(
-                        new ExportEvent(metrics, ExportEvent.EventType.INCREMENT)));
                 } else {
                     metrics.calculate();
                     prepareRequests.add(metricsDAO.prepareBatchInsert(model, metrics));
                     nextWorker(metrics);
                 }
+
+                /*
+                 * The `metrics` should be not changed in all above process. Exporter is an async process.
+                 */
+                nextExportWorker.ifPresent(exportEvenWorker -> exportEvenWorker.in(
+                    new ExportEvent(metrics, ExportEvent.EventType.INCREMENT)));
             }
         } catch (Throwable t) {
             log.error(t.getMessage(), t);
